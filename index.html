@@ -62,12 +62,17 @@
   .chip:active{background:#E7F7EF;border-color:var(--orange);}
   .tasktip{font-size:12px;color:var(--ink-soft);margin:8px 0 0;line-height:1.5;}
 
-  .photo-box{border:1.5px dashed #A7CFBB;border-radius:16px;background:#F7FCF9;padding:18px;text-align:center;
+  .photo-box{display:block;width:100%;border:1.5px dashed #A7CFBB;border-radius:16px;background:#F7FCF9;padding:18px;text-align:center;
     cursor:pointer;transition:.15s;}
   .photo-box:active{background:#EAF8F1;}
-  .photo-box .ic{font-size:30px;}
-  .photo-box .t{font-size:14px;font-weight:700;margin-top:6px;}
-  .photo-box .s{font-size:12px;color:var(--ink-soft);margin-top:3px;}
+  .photo-box .ic{position:relative;width:36px;height:27px;margin:2px auto 10px;border:2px solid var(--orange-deep);
+    border-radius:7px;background:#fff;}
+  .photo-box .ic::before{content:"";position:absolute;left:8px;top:-7px;width:16px;height:7px;
+    border:2px solid var(--orange-deep);border-bottom:0;border-radius:5px 5px 0 0;background:#fff;}
+  .photo-box .ic::after{content:"";position:absolute;left:10px;top:6px;width:11px;height:11px;
+    border:2px solid var(--orange-deep);border-radius:50%;background:#E7F7EF;}
+  .photo-box .t{font-size:15px;line-height:1.5;font-weight:700;color:var(--ink);}
+  .photo-box .s{font-size:12px;line-height:1.5;color:var(--ink-soft);margin-top:3px;}
   #fileInput{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
     clip:rect(0,0,0,0);white-space:nowrap;border:0;}
   .privacy{display:flex;gap:8px;align-items:flex-start;background:#E6F6EE;border-radius:12px;padding:10px 12px;
@@ -159,7 +164,7 @@
   <div class="card">
     <p class="label"><span class="dot"></span>添加今日照片（可选）</p>
     <label class="photo-box" id="photoBox" for="fileInput">
-      <div class="ic">📷</div>
+      <div class="ic" aria-hidden="true"></div>
       <div class="t" id="photoTitle">点这里选一张照片</div>
       <div class="s" id="photoSub">读书、做家务、运动的瞬间都可以</div>
     </label>
@@ -311,7 +316,7 @@ document.getElementById('fileInput').addEventListener('change',e=>{
   const r=new FileReader();
   r.onerror=()=>{errEl.textContent='照片读取失败，请换一张照片重试。';errEl.style.display='block';};
   r.onload=ev=>{const img=new Image();img.onload=()=>{state.photo=img;
-    document.getElementById('photoTitle').textContent='✅ 已选好照片，可点击更换';
+    document.getElementById('photoTitle').textContent='照片已选择，可点击更换';
     document.getElementById('photoSub').textContent=f.name;validate();};
     img.onerror=()=>{errEl.textContent='照片格式暂不支持，请改用 JPG 或 PNG。';errEl.style.display='block';};
     img.src=ev.target.result;};
