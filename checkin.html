@@ -51,6 +51,12 @@
   .day.active{background:linear-gradient(120deg,var(--blue),var(--blue-deep));color:#fff;border-color:transparent;
     box-shadow:0 6px 14px rgba(30,115,232,.3);}
   .day.active small{opacity:.85;}
+  .day.done{background:#EAF8F0;border-color:#BCE6CD;color:#2E9E63;cursor:default;}
+  .day.done small{opacity:.7;}
+  .day.locked{background:#F4F2EF;border-color:var(--line);color:#C2BAB1;cursor:not-allowed;}
+  .dayhint{font-size:12px;color:#8A8178;margin:8px 2px 0;line-height:1.5;}
+  .reset-row{margin:6px 2px 0;}
+  .reset-link{font-size:12px;color:#B26A3C;text-decoration:underline;cursor:pointer;}
 
   .cats{display:flex;gap:8px;margin-bottom:12px;}
   .cat{flex:1;border:1.5px solid var(--line);border-radius:13px;background:#FFFDFB;padding:11px 0;text-align:center;
@@ -139,6 +145,8 @@
   <div class="card">
     <p class="label"><span class="dot"></span>今天是第几天打卡</p>
     <div class="days" id="days"></div>
+    <p id="dayMsg" class="dayhint"></p>
+    <div class="reset-row"><a id="resetProg" class="reset-link">重置本机打卡进度</a></div>
   </div>
 
   <div class="card">
@@ -239,17 +247,58 @@ const SUGGEST = {
   sport: ["跳绳100下","和爸妈一起散步","跑步10分钟","帮妈妈捶捶背"]
 };
 
-const state = {day:1, name:"", task:"", tier:"preschool", photo:null, photoDataUrl:null, isPublic:false, taskClean:""};
+const state = {day:1, name:"", task:"", tier:"preschool", photo:null, photoDataUrl:null, isPublic:false, taskClean:"", checkable:false};
 
-/* 天数 1-10 */
-const daysEl=document.getElementById('days');
-for(let i=1;i<=21;i++){
-  const d=document.createElement('div');
-  d.className='day'+(i===1?' active':'');
-  d.innerHTML='<small>DAY</small>'+i;
-  d.onclick=()=>{state.day=i;[...daysEl.children].forEach(c=>c.classList.remove('active'));d.classList.add('active');};
-  daysEl.appendChild(d);
+/* ===== 打卡进度：必须按顺序解锁，进度按姓名存在本机 ===== */
+const TESTMODE=/[?&]test=1/.test(location.search);
+const ONE_PER_DAY=!TESTMODE; // 默认严格每日：今天打卡后，要到第二天才解锁下一天。打开 checkin.html?test=1 可同日连打，方便测试/演示。
+function todayStr(){const d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
+const MEM={};
+function pkey(n){return 'bailicai_progress::'+n;}
+function loadProg(n){
+  if(!n)return {done:[],last:''};
+  try{const r=localStorage.getItem(pkey(n));if(r){const p=JSON.parse(r);MEM[n]=p;return p;}}catch(e){}
+  return MEM[n]||{done:[],last:''};
 }
+function saveProg(n,p){MEM[n]=p;try{localStorage.setItem(pkey(n),JSON.stringify(p));}catch(e){}}
+function firstUndone(p){let n=1;const s=new Set(p.done||[]);while(s.has(n)&&n<=21)n++;return n;} // 1..22
+
+const daysEl=document.getElementById('days');
+const dayMsg=document.getElementById('dayMsg');
+const genBtnEl=document.getElementById('genBtn');
+function refreshDayUI(){
+  const name=state.name;
+  const p=loadProg(name);
+  const nd=firstUndone(p);                 // 第一个未完成的天（1..22）
+  const lockedToday=ONE_PER_DAY && p.last===todayStr();
+  state.day=Math.min(nd,21);
+  state.checkable=!!name && nd<=21 && !lockedToday;
+
+  daysEl.innerHTML='';
+  for(let i=1;i<=21;i++){
+    const d=document.createElement('div');
+    if((p.done||[]).includes(i)){d.className='day done';d.innerHTML='<small>DAY</small>✓';}
+    else if(i===nd && state.checkable){d.className='day active';d.innerHTML='<small>DAY</small>'+i;}
+    else {d.className='day locked';d.innerHTML='<small>DAY</small>'+i;}
+    daysEl.appendChild(d); // 顺序锁定：不可点击切换
+  }
+
+  if(!name) dayMsg.textContent='先填写孩子姓名，打卡进度会按姓名分别保存在本机。';
+  else if(nd>21) dayMsg.textContent='🎉 太棒了！21 天已全部完成。';
+  else if(lockedToday) dayMsg.textContent='今天已打卡 ✓，明天再来解锁第 '+nd+' 天。';
+  else dayMsg.textContent='今天打卡：第 '+nd+' 天'+(nd<21?'（完成后才解锁第 '+(nd+1)+' 天）':'（最后一天，冲鸭！）')+'。';
+
+  genBtnEl.textContent = (name && nd>21) ? '21 天已全部完成 🎉'
+                       : (lockedToday ? '今天已打卡 · 明天继续' : '生成今日成就卡');
+  validate();
+}
+document.getElementById('resetProg').onclick=()=>{
+  const name=state.name;
+  if(!name){alert('请先填写孩子姓名');return;}
+  if(!confirm('确定清空「'+name+'」在本机的打卡进度吗？此操作不可恢复。'))return;
+  try{localStorage.removeItem(pkey(name));}catch(e){} delete MEM[name];
+  refreshDayUI();
+};
 
 /* 阶段选择（决定能否上荣誉墙） */
 const pubEl=document.getElementById('isPublic');
@@ -303,7 +352,7 @@ document.querySelectorAll('#cats .cat').forEach(c=>{
 taskInput.oninput=e=>{state.task=e.target.value;validate();};
 
 /* 名字 */
-document.getElementById('nameInput').oninput=e=>{state.name=e.target.value.trim();validate();};
+document.getElementById('nameInput').oninput=e=>{state.name=e.target.value.trim();refreshDayUI();};
 
 /* 照片（本地读取，不上传） */
 document.getElementById('photoBox').onclick=()=>document.getElementById('fileInput').click();
@@ -329,7 +378,7 @@ function taskOK(s){return s && !BAD.some(w=>s.includes(w));}
 
 const errEl=document.getElementById('err');
 function validate(){
-  const ok=state.name && state.task.trim();
+  const ok=state.name && state.task.trim() && state.checkable;
   document.getElementById('genBtn').disabled=!ok;
   errEl.style.display='none';return ok;
 }
@@ -469,6 +518,11 @@ function submitToServer(){
 
 function generate(){
   if(!validate()){errEl.textContent='请先填名字，并写上今天打卡的内容～';errEl.style.display='block';return;}
+  if(!state.checkable){
+    const p=loadProg(state.name);
+    errEl.textContent=(firstUndone(p)>21)?'21 天已全部完成啦～':'今天已经打过卡了，明天再来解锁下一天～';
+    errEl.style.display='block';return;
+  }
   const cleaned=cleanTask(state.task);
   if(!cleaned){errEl.textContent='打卡内容不能为空，写一句吧～';errEl.style.display='block';return;}
   if(!taskOK(cleaned)){errEl.textContent='这条内容不太适合放到成就卡上，换一句吧～';errEl.style.display='block';return;}
@@ -480,13 +534,19 @@ function generate(){
   document.getElementById('dlLink').download='百里才成就卡_'+state.name+'_第'+state.day+'天.png';
   const res=document.getElementById('result');res.style.display='block';
   res.scrollIntoView({behavior:'smooth',block:'center'});
-  submitToServer();
+  // 记录今天完成 → 解锁下一天
+  const p=loadProg(state.name);
+  if(!(p.done||[]).includes(state.day))p.done=(p.done||[]).concat(state.day);
+  p.last=todayStr();saveProg(state.name,p);
+  submitToServer();   // 同步给后台（用的是刚完成的 state.day）
+  refreshDayUI();     // 刷新解锁状态
 }
 function assetsReady(){return LOGO.complete && LOGO.naturalWidth && QR.complete && QR.naturalWidth;}
 document.getElementById('genBtn').onclick=()=>{
   if(assetsReady()){generate();}
   else{LOGO.onload=()=>{if(assetsReady())generate();};QR.onload=()=>{if(assetsReady())generate();};}
 };
+refreshDayUI(); // 初始化天数解锁状态
 </script>
 </body>
 </html>

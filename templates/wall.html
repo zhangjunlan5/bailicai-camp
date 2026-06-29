@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>百里才教育 · 小达人荣誉墙</title>
+<style>
+  :root{--orange:#FF7A2F;--blue:#1E73E8;--blue-deep:#0B4FB0;--ink:#2A2320;--soft:#718096;}
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:"PingFang SC","Microsoft YaHei",sans-serif;color:var(--ink);
+    background:#FFF7EF;}
+  .hero{background:linear-gradient(120deg,var(--orange),#FFB23C);color:#fff;
+    padding:26px 18px;text-align:center;}
+  .hero h1{margin:0 0 4px;font-size:22px;font-weight:800;}
+  .hero p{margin:0;font-size:13px;opacity:.95;}
+  .wrap{max-width:760px;margin:0 auto;padding:18px 14px 50px;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;}
+  .item{background:#fff;border:1px solid #F0E4D8;border-radius:14px;overflow:hidden;
+    box-shadow:0 4px 12px rgba(42,35,32,.05);}
+  .item img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block;}
+  .meta{padding:10px 12px;}
+  .meta .nm{font-size:14px;font-weight:800;color:var(--blue-deep);}
+  .meta .dy{font-size:12px;color:var(--orange);font-weight:700;margin-left:4px;}
+  .meta .ms{font-size:12px;color:var(--soft);margin-top:4px;line-height:1.4;}
+  .empty{text-align:center;color:var(--soft);padding:60px 20px;}
+  .loading{text-align:center;color:var(--soft);padding:50px;}
+</style>
+</head>
+<body>
+  <div class="hero">
+    <h1>🌟 小达人荣誉墙</h1>
+    <p>百里才教育 · 全能小达人习惯营</p>
+  </div>
+  <div class="wrap">
+    <div id="grid" class="grid"></div>
+    <div id="loading" class="loading">加载中…</div>
+  </div>
+<script>
+fetch('/api/wall').then(r=>r.json()).then(d=>{
+  const grid=document.getElementById('grid');
+  const loading=document.getElementById('loading');
+  loading.style.display='none';
+  if(!d.ok || !d.items.length){
+    loading.style.display='block';loading.className='empty';
+    loading.textContent='荣誉墙还在等待第一位小达人～';return;
+  }
+  d.items.forEach(it=>{
+    const div=document.createElement('div');div.className='item';
+    const img=document.createElement('img');img.src=it.photo;img.alt='打卡照片';img.loading='lazy';
+    const meta=document.createElement('div');meta.className='meta';
+    const line=document.createElement('div');
+    const nm=document.createElement('span');nm.className='nm';nm.textContent=it.name;
+    const dy=document.createElement('span');dy.className='dy';dy.textContent='· 第'+it.day+'天';
+    line.appendChild(nm);line.appendChild(dy);meta.appendChild(line);
+    if(it.message){const ms=document.createElement('div');ms.className='ms';
+      ms.textContent='“'+it.message+'”';meta.appendChild(ms);}
+    div.appendChild(img);div.appendChild(meta);grid.appendChild(div);
+  });
+}).catch(()=>{
+  const l=document.getElementById('loading');l.className='empty';l.textContent='加载失败，请稍后再试。';
+});
+</script>
+</body>
+</html>

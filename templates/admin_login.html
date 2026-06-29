@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>百里才教育 · 后台登录</title>
+<style>
+  body{margin:0;font-family:"PingFang SC","Microsoft YaHei",sans-serif;
+    background:linear-gradient(135deg,#0B4FB0,#1E73E8);min-height:100vh;
+    display:flex;align-items:center;justify-content:center;}
+  .box{background:#fff;border-radius:18px;padding:34px 30px;width:320px;
+    box-shadow:0 16px 40px rgba(0,0,0,.2);text-align:center;}
+  h1{font-size:20px;color:#1A365D;margin:0 0 4px;}
+  p{font-size:13px;color:#718096;margin:0 0 22px;}
+  input{width:100%;box-sizing:border-box;padding:13px 14px;font-size:15px;
+    border:1.5px solid #E2E8F0;border-radius:12px;outline:none;margin-bottom:14px;}
+  input:focus{border-color:#1E73E8;}
+  button{width:100%;padding:13px;font-size:15px;font-weight:700;color:#fff;border:none;
+    border-radius:12px;background:linear-gradient(120deg,#FF7A2F,#F2620F);cursor:pointer;}
+  .err{color:#E0431F;font-size:13px;margin-bottom:12px;min-height:18px;}
+</style>
+</head>
+<body>
+  <form class="box" method="POST" action="{{ url_for('admin_login') }}">
+    <h1>百里才打卡营 · 后台</h1>
+    <p>老师 / 校长登录</p>
+    <div class="err">{{ error or '' }}</div>
+    <input type="password" name="password" placeholder="请输入管理密码" autofocus />
+    <button type="submit">登录</button>
+  </form>
+</body>
+</html>
