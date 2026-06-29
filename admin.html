@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>百里才教育 · 习惯营管理后台</title>
+<style>
+  body{font-family:"PingFang SC","Microsoft YaHei",sans-serif;background:#F7FAFC;margin:0;padding:24px;color:#2D3748;}
+  .dashboard{max-width:1200px;margin:0 auto;background:#fff;padding:24px;border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,.05);}
+  .head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
+  h2{color:#1A365D;margin:0;font-size:20px;}
+  .actions{display:flex;gap:10px;}
+  .btn{border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;}
+  .btn-wall{background:#EBF8FF;color:#2B6CB0;text-decoration:none;display:inline-block;}
+  .btn-clean{background:#FFF5F5;color:#C53030;}
+  .btn-out{background:#EDF2F7;color:#4A5568;}
+  .stat-grid{display:flex;gap:16px;margin:22px 0;flex-wrap:wrap;}
+  .stat-card{background:#EBF8FF;padding:16px;border-radius:10px;flex:1;min-width:150px;text-align:center;color:#2B6CB0;font-weight:700;font-size:14px;}
+  .stat-card b{display:block;font-size:26px;margin-top:6px;}
+  table{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px;}
+  th,td{border-bottom:1px solid #EDF2F7;padding:11px 10px;text-align:left;vertical-align:middle;}
+  th{background:#1A365D;color:#fff;font-weight:600;}
+  .thumb{width:54px;height:54px;object-fit:cover;border-radius:6px;border:1px solid #E2E8F0;}
+  .no-photo{color:#A0AEC0;font-size:12px;}
+  .badge{padding:4px 9px;border-radius:12px;font-size:12px;font-weight:700;white-space:nowrap;}
+  .b-public{background:#C6F6D5;color:#22543D;}
+  .b-private{background:#EDF2F7;color:#4A5568;}
+  .b-hidden{background:#FEEBC8;color:#7B341E;}
+  .tier{padding:3px 8px;border-radius:10px;font-size:12px;font-weight:700;}
+  .t-pre{background:#FEF5E7;color:#B7791F;}
+  .t-pri{background:#E6FFFA;color:#234E52;}
+  .op{border:none;background:none;cursor:pointer;font-size:13px;font-weight:700;padding:4px 6px;}
+  .op-hide{color:#DD6B20;}
+  .op-del{color:#E53E3E;}
+  .empty{text-align:center;color:#A0AEC0;padding:40px;}
+</style>
+</head>
+<body>
+<div class="dashboard">
+  <div class="head">
+    <h2>📊 百里才打卡营 · 数据总览</h2>
+    <div class="actions">
+      <a class="btn btn-wall" href="{{ url_for('wall') }}" target="_blank">查看荣誉墙</a>
+      <button class="btn btn-clean" onclick="cleanup()">清理过期数据</button>
+      <form method="POST" action="{{ url_for('admin_logout') }}" style="display:inline;">
+        <button class="btn btn-out" type="submit">退出</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat-card">总打卡记录<b style="color:#FF6B00;">{{ total }}</b></div>
+    <div class="stat-card">荣誉墙展示中<b>{{ public }}</b></div>
+    <div class="stat-card">今日打卡<b>{{ today }}</b></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>打卡时间</th><th>姓名</th><th>阶段</th><th>天数</th><th>打卡内容</th>
+        <th>照片</th><th>状态</th><th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr id="row-{{ r['id'] }}">
+        <td>{{ r['created_at'] }}</td>
+        <td>{{ r['student_name'] }}</td>
+        <td>
+          {% if r['tier'] == 'preschool' %}<span class="tier t-pre">学龄前</span>
+          {% else %}<span class="tier t-pri">小学</span>{% endif %}
+        </td>
+        <td>第 {{ r['day_count'] }} 天</td>
+        <td>{{ r['task_text'] or '—' }}</td>
+        <td>
+          {% if r['photo_file'] %}
+            <img class="thumb" src="{{ url_for('admin_media', fn=r['photo_file']) }}" alt="照片">
+          {% else %}
+            <span class="no-photo">未上传</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if r['photo_file'] and r['is_public'] %}
+            {% if r['hidden'] %}<span class="badge b-hidden">已下架</span>
+            {% else %}<span class="badge b-public">展示中</span>{% endif %}
+          {% else %}
+            <span class="badge b-private">仅考勤</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if r['photo_file'] and r['is_public'] %}
+            <button class="op op-hide" onclick="toggleHide({{ r['id'] }})">
+              {% if r['hidden'] %}恢复{% else %}下架{% endif %}
+            </button>
+          {% endif %}
+          <button class="op op-del" onclick="del({{ r['id'] }})">删除</button>
+        </td>
+      </tr>
+      {% endfor %}
+      {% if rows|length == 0 %}
+      <tr><td colspan="8" class="empty">还没有打卡记录</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+function toggleHide(id){fetch('/api/admin/hide/'+id,{method:'POST'}).then(r=>r.json()).then(d=>{if(d.ok)location.reload();});}
+function del(id){if(!confirm('确定彻底删除这条记录及其照片？此操作不可恢复。'))return;
+  fetch('/api/admin/delete/'+id,{method:'POST'}).then(r=>r.json()).then(d=>{if(d.ok){const el=document.getElementById('row-'+id);if(el)el.remove();}});}
+function cleanup(){if(!confirm('将删除超过保留期的所有记录与照片，确定？'))return;
+  fetch('/api/admin/cleanup',{method:'POST'}).then(r=>r.json()).then(d=>{if(d.ok){alert('已清理 '+d.deleted+' 条过期记录');location.reload();}});}
+</script>
+</body>
+</html>
